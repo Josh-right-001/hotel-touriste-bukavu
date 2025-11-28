@@ -12,25 +12,34 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { admin, setAdmin } = useAdmin()
-  const [initialized, setInitialized] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (initialized) return
+    setMounted(true)
 
-    const savedSession = localStorage.getItem("hotelTouristeSession")
-    if (savedSession) {
-      const session = JSON.parse(savedSession)
-      setAdmin({ name: session.name, phone: session.phone, role: "admin" })
-      setIsAuthenticated(true)
+    if (typeof window !== "undefined") {
+      try {
+        const savedSession = localStorage.getItem("hotelTouristeSession")
+        if (savedSession) {
+          const session = JSON.parse(savedSession)
+          setAdmin({ name: session.name, phone: session.phone, role: "admin" })
+          setIsAuthenticated(true)
+        }
+      } catch (e) {
+        // Invalid session, ignore
+      }
     }
-    setInitialized(true)
-  }, [initialized, setAdmin])
+  }, []) // Remove setAdmin from dependencies to prevent infinite loop
 
   const handleLoginSuccess = useCallback(
     (adminData: { name: string; phone: string }) => {
       setAdmin({ name: adminData.name, phone: adminData.phone, role: "admin" })
       setIsAuthenticated(true)
-      localStorage.setItem("hotelTouristeSession", JSON.stringify(adminData))
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("hotelTouristeSession", JSON.stringify(adminData))
+        } catch (e) {}
+      }
     },
     [setAdmin],
   )
@@ -38,9 +47,21 @@ export default function Home() {
   const handleLogout = useCallback(() => {
     setAdmin(null)
     setIsAuthenticated(false)
-    localStorage.removeItem("hotelTouristeSession")
-    localStorage.removeItem("hotelTouristeAdminProfile")
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("hotelTouristeSession")
+        localStorage.removeItem("hotelTouristeAdminProfile")
+      } catch (e) {}
+    }
   }, [setAdmin])
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-[#071428] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen">

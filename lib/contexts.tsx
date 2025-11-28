@@ -63,6 +63,8 @@ interface AppProvidersProps {
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
+  const [mounted, setMounted] = useState(false)
+
   // Theme state
   const [theme, setThemeState] = useState<Theme>("dark")
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("dark")
@@ -73,19 +75,35 @@ export function AppProviders({ children }: AppProvidersProps) {
   // Admin state
   const [admin, setAdminState] = useState<AdminProfile | null>(null)
 
-  // Initialize from localStorage
   useEffect(() => {
-    const savedTheme = localStorage.getItem("hotelTouristeTheme") as Theme | null
-    const savedLanguage = localStorage.getItem("hotelTouristeLanguage") as Language | null
-    const savedAdmin = localStorage.getItem("hotelTouristeAdminProfile")
+    setMounted(true)
 
-    if (savedTheme) setThemeState(savedTheme)
-    if (savedLanguage) setLanguageState(savedLanguage)
-    if (savedAdmin) setAdminState(JSON.parse(savedAdmin))
+    // Only access localStorage on client side
+    if (typeof window !== "undefined") {
+      try {
+        const savedTheme = localStorage.getItem("hotelTouristeTheme") as Theme | null
+        const savedLanguage = localStorage.getItem("hotelTouristeLanguage") as Language | null
+        const savedAdmin = localStorage.getItem("hotelTouristeAdminProfile")
+
+        if (savedTheme) setThemeState(savedTheme)
+        if (savedLanguage) setLanguageState(savedLanguage)
+        if (savedAdmin) {
+          try {
+            setAdminState(JSON.parse(savedAdmin))
+          } catch (e) {
+            // Invalid JSON, ignore
+          }
+        }
+      } catch (e) {
+        // localStorage not available, ignore
+      }
+    }
   }, [])
 
   // Update resolved theme
   useEffect(() => {
+    if (!mounted) return
+
     const updateResolvedTheme = () => {
       if (theme === "system") {
         const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -102,22 +120,31 @@ export function AppProviders({ children }: AppProvidersProps) {
       mediaQuery.addEventListener("change", updateResolvedTheme)
       return () => mediaQuery.removeEventListener("change", updateResolvedTheme)
     }
-  }, [theme])
+  }, [theme, mounted])
 
   // Apply theme to document
   useEffect(() => {
+    if (!mounted) return
     document.documentElement.classList.remove("light", "dark")
     document.documentElement.classList.add(resolvedTheme)
-  }, [resolvedTheme])
+  }, [resolvedTheme, mounted])
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem("hotelTouristeTheme", newTheme)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("hotelTouristeTheme", newTheme)
+      } catch (e) {}
+    }
   }, [])
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
-    localStorage.setItem("hotelTouristeLanguage", lang)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("hotelTouristeLanguage", lang)
+      } catch (e) {}
+    }
   }, [])
 
   const t = useCallback(
@@ -129,10 +156,14 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   const setAdmin = useCallback((newAdmin: AdminProfile | null) => {
     setAdminState(newAdmin)
-    if (newAdmin) {
-      localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(newAdmin))
-    } else {
-      localStorage.removeItem("hotelTouristeAdminProfile")
+    if (typeof window !== "undefined") {
+      try {
+        if (newAdmin) {
+          localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(newAdmin))
+        } else {
+          localStorage.removeItem("hotelTouristeAdminProfile")
+        }
+      } catch (e) {}
     }
   }, [])
 
@@ -140,7 +171,11 @@ export function AppProviders({ children }: AppProvidersProps) {
     setAdminState((current) => {
       if (current) {
         const updatedAdmin = { ...current, ...updates }
-        localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(updatedAdmin))
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(updatedAdmin))
+          } catch (e) {}
+        }
         return updatedAdmin
       }
       return current
