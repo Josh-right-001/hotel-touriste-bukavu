@@ -58,6 +58,11 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
         .single()
 
       if (dbError || !admin) {
+        // Fallback for authorized numbers not in DB
+        if (AUTHORIZED_NUMBERS.includes(formattedNumber)) {
+          onSuccess({ name: "Administrateur", phone: formattedNumber })
+          return
+        }
         setError(t("unauthorizedNumber"))
         setIsLoading(false)
         return
@@ -75,14 +80,17 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     }
   }
 
+  const bgClass =
+    resolvedTheme === "light"
+      ? "bg-gradient-to-br from-slate-50 to-slate-100"
+      : "bg-gradient-to-br from-[#071428] via-[#0F2744] to-[#071428]"
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className={`min-h-screen flex items-center justify-center p-4 ${
-        resolvedTheme === "light" ? "bg-gradient-to-br from-slate-50 to-slate-100" : ""
-      }`}
+      className={`min-h-screen flex items-center justify-center p-4 ${bgClass}`}
     >
       <div className="w-full max-w-md">
         <motion.div

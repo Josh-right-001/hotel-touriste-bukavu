@@ -16,7 +16,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function useTheme() {
   const context = useContext(ThemeContext)
-  if (!context) throw new Error("useTheme must be used within ThemeProvider")
+  if (!context) {
+    return {
+      theme: "dark" as Theme,
+      setTheme: () => {},
+      resolvedTheme: "dark" as const,
+    }
+  }
   return context
 }
 
@@ -31,7 +37,13 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function useLanguage() {
   const context = useContext(LanguageContext)
-  if (!context) throw new Error("useLanguage must be used within LanguageProvider")
+  if (!context) {
+    return {
+      language: "fr" as Language,
+      setLanguage: () => {},
+      t: (key: TranslationKey) => translations.fr[key] || key,
+    }
+  }
   return context
 }
 
@@ -53,7 +65,13 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined)
 
 export function useAdmin() {
   const context = useContext(AdminContext)
-  if (!context) throw new Error("useAdmin must be used within AdminProvider")
+  if (!context) {
+    return {
+      admin: null,
+      setAdmin: () => {},
+      updateProfile: () => {},
+    }
+  }
   return context
 }
 
@@ -78,25 +96,31 @@ export function AppProviders({ children }: AppProvidersProps) {
   useEffect(() => {
     setMounted(true)
 
-    // Only access localStorage on client side
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         const savedTheme = localStorage.getItem("hotelTouristeTheme") as Theme | null
         const savedLanguage = localStorage.getItem("hotelTouristeLanguage") as Language | null
         const savedAdmin = localStorage.getItem("hotelTouristeAdminProfile")
 
-        if (savedTheme) setThemeState(savedTheme)
-        if (savedLanguage) setLanguageState(savedLanguage)
+        if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
+          setThemeState(savedTheme)
+        }
+        if (savedLanguage && ["fr", "en"].includes(savedLanguage)) {
+          setLanguageState(savedLanguage)
+        }
         if (savedAdmin) {
           try {
-            setAdminState(JSON.parse(savedAdmin))
-          } catch (e) {
+            const parsed = JSON.parse(savedAdmin)
+            if (parsed && typeof parsed.name === "string") {
+              setAdminState(parsed)
+            }
+          } catch {
             // Invalid JSON, ignore
           }
         }
-      } catch (e) {
-        // localStorage not available, ignore
       }
+    } catch {
+      // localStorage not available
     }
   }, [])
 
@@ -105,65 +129,86 @@ export function AppProviders({ children }: AppProvidersProps) {
     if (!mounted) return
 
     const updateResolvedTheme = () => {
-      if (theme === "system") {
-        const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-        setResolvedTheme(systemDark ? "dark" : "light")
-      } else {
-        setResolvedTheme(theme)
+      try {
+        if (theme === "system" && typeof window !== "undefined") {
+          const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+          setResolvedTheme(systemDark ? "dark" : "light")
+        } else {
+          setResolvedTheme(theme === "light" ? "light" : "dark")
+        }
+      } catch {
+        setResolvedTheme("dark")
       }
     }
 
     updateResolvedTheme()
 
-    if (theme === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-      mediaQuery.addEventListener("change", updateResolvedTheme)
-      return () => mediaQuery.removeEventListener("change", updateResolvedTheme)
+    if (theme === "system" && typeof window !== "undefined") {
+      try {
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+        const handler = () => updateResolvedTheme()
+        mediaQuery.addEventListener("change", handler)
+        return () => mediaQuery.removeEventListener("change", handler)
+      } catch {
+        // matchMedia not supported
+      }
     }
   }, [theme, mounted])
 
   // Apply theme to document
   useEffect(() => {
     if (!mounted) return
-    document.documentElement.classList.remove("light", "dark")
-    document.documentElement.classList.add(resolvedTheme)
+    try {
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.remove("light", "dark")
+        document.documentElement.classList.add(resolvedTheme)
+      }
+    } catch {
+      // Document not available
+    }
   }, [resolvedTheme, mounted])
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         localStorage.setItem("hotelTouristeTheme", newTheme)
-      } catch (e) {}
+      }
+    } catch {
+      // localStorage not available
     }
   }, [])
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         localStorage.setItem("hotelTouristeLanguage", lang)
-      } catch (e) {}
+      }
+    } catch {
+      // localStorage not available
     }
   }, [])
 
   const t = useCallback(
     (key: TranslationKey): string => {
-      return translations[language][key] || key
+      return translations[language]?.[key] || translations.fr[key] || key
     },
     [language],
   )
 
   const setAdmin = useCallback((newAdmin: AdminProfile | null) => {
     setAdminState(newAdmin)
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         if (newAdmin) {
           localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(newAdmin))
         } else {
           localStorage.removeItem("hotelTouristeAdminProfile")
         }
-      } catch (e) {}
+      }
+    } catch {
+      // localStorage not available
     }
   }, [])
 
@@ -171,10 +216,12 @@ export function AppProviders({ children }: AppProvidersProps) {
     setAdminState((current) => {
       if (current) {
         const updatedAdmin = { ...current, ...updates }
-        if (typeof window !== "undefined") {
-          try {
+        try {
+          if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
             localStorage.setItem("hotelTouristeAdminProfile", JSON.stringify(updatedAdmin))
-          } catch (e) {}
+          }
+        } catch {
+          // localStorage not available
         }
         return updatedAdmin
       }

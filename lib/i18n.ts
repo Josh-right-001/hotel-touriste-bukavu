@@ -74,6 +74,7 @@ export const translations = {
     new: "Nouveau",
     exportJson: "Export JSON",
     exportPdf: "Export PDF",
+    exportExcel: "Export Excel",
     sortBy: "Trier par",
     recent: "Plus récents",
     byName: "Nom A-Z",
@@ -128,8 +129,8 @@ export const translations = {
     name: "Nom",
     appearance: "Apparence",
     theme: "Thème",
-    lightTheme: "Thème Clair",
-    darkTheme: "Thème Sombre",
+    lightTheme: "Clair",
+    darkTheme: "Sombre",
     systemTheme: "Système",
     language: "Langue",
     french: "Français",
@@ -224,6 +225,7 @@ export const translations = {
     new: "New",
     exportJson: "Export JSON",
     exportPdf: "Export PDF",
+    exportExcel: "Export Excel",
     sortBy: "Sort by",
     recent: "Most Recent",
     byName: "Name A-Z",
@@ -278,8 +280,8 @@ export const translations = {
     name: "Name",
     appearance: "Appearance",
     theme: "Theme",
-    lightTheme: "Light Theme",
-    darkTheme: "Dark Theme",
+    lightTheme: "Light",
+    darkTheme: "Dark",
     systemTheme: "System",
     language: "Language",
     french: "Français",
@@ -297,7 +299,7 @@ export const translations = {
     giveToReceptionist: "Give to receptionist",
     giveToReceptionistDesc: "Opens a new page for the receptionist. A notification will be sent after processing.",
   },
-}
+} as const
 
 export type Language = "fr" | "en"
 export type TranslationKey = keyof typeof translations.fr

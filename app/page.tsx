@@ -1,44 +1,69 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { AnimatePresence } from "framer-motion"
-import { LoadingScreen } from "@/components/loading-screen"
-import { LoginPage } from "@/components/login-page"
-import { AdminDashboard } from "@/components/admin/admin-dashboard"
-import { InstallPrompt } from "@/components/install-prompt"
+import dynamic from "next/dynamic"
 import { useAdmin } from "@/lib/contexts"
+
+const LoadingScreen = dynamic(
+  () => import("@/components/loading-screen").then((mod) => ({ default: mod.LoadingScreen })),
+  {
+    ssr: false,
+  },
+)
+
+const LoginPage = dynamic(() => import("@/components/login-page").then((mod) => ({ default: mod.LoginPage })), {
+  ssr: false,
+})
+
+const AdminDashboard = dynamic(
+  () => import("@/components/admin/admin-dashboard").then((mod) => ({ default: mod.AdminDashboard })),
+  {
+    ssr: false,
+  },
+)
+
+const InstallPrompt = dynamic(
+  () => import("@/components/install-prompt").then((mod) => ({ default: mod.InstallPrompt })),
+  {
+    ssr: false,
+  },
+)
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const { admin, setAdmin } = useAdmin()
   const [mounted, setMounted] = useState(false)
+  const { admin, setAdmin } = useAdmin()
 
   useEffect(() => {
     setMounted(true)
 
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         const savedSession = localStorage.getItem("hotelTouristeSession")
         if (savedSession) {
           const session = JSON.parse(savedSession)
-          setAdmin({ name: session.name, phone: session.phone, role: "admin" })
-          setIsAuthenticated(true)
+          if (session && session.name && session.phone) {
+            setAdmin({ name: session.name, phone: session.phone, role: "admin" })
+            setIsAuthenticated(true)
+          }
         }
-      } catch (e) {
-        // Invalid session, ignore
       }
+    } catch {
+      // localStorage not available or invalid JSON
     }
-  }, []) // Remove setAdmin from dependencies to prevent infinite loop
+  }, [])
 
   const handleLoginSuccess = useCallback(
     (adminData: { name: string; phone: string }) => {
       setAdmin({ name: adminData.name, phone: adminData.phone, role: "admin" })
       setIsAuthenticated(true)
-      if (typeof window !== "undefined") {
-        try {
+      try {
+        if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
           localStorage.setItem("hotelTouristeSession", JSON.stringify(adminData))
-        } catch (e) {}
+        }
+      } catch {
+        // localStorage not available
       }
     },
     [setAdmin],
@@ -47,37 +72,33 @@ export default function Home() {
   const handleLogout = useCallback(() => {
     setAdmin(null)
     setIsAuthenticated(false)
-    if (typeof window !== "undefined") {
-      try {
+    try {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         localStorage.removeItem("hotelTouristeSession")
         localStorage.removeItem("hotelTouristeAdminProfile")
-      } catch (e) {}
+      }
+    } catch {
+      // localStorage not available
     }
   }, [setAdmin])
 
   if (!mounted) {
     return (
-      <main className="min-h-screen bg-[#071428] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-      </main>
+      <div className="min-h-screen bg-[#071428] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen">
-      <AnimatePresence mode="wait">
-        {isLoading ? (
-          <LoadingScreen key="loading" onComplete={() => setIsLoading(false)} />
-        ) : !isAuthenticated ? (
-          <LoginPage key="login" onSuccess={handleLoginSuccess} />
-        ) : (
-          <AdminDashboard
-            key="dashboard"
-            admin={admin || { name: "Admin", phone: "", role: "admin" }}
-            onLogout={handleLogout}
-          />
-        )}
-      </AnimatePresence>
+    <main className="min-h-screen bg-[#071428]">
+      {isLoading ? (
+        <LoadingScreen onComplete={() => setIsLoading(false)} />
+      ) : !isAuthenticated ? (
+        <LoginPage onSuccess={handleLoginSuccess} />
+      ) : (
+        <AdminDashboard admin={admin || { name: "Admin", phone: "", role: "admin" }} onLogout={handleLogout} />
+      )}
       <InstallPrompt />
     </main>
   )

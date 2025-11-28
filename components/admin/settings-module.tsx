@@ -22,6 +22,7 @@ import {
   Camera,
   ExternalLink,
   Palette,
+  Code,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -63,16 +64,21 @@ export function SettingsModule() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const supabase = createClient()
+      try {
+        const supabase = createClient()
 
-      const [settingsRes, adminsRes] = await Promise.all([
-        supabase.from("hotel_settings").select("*").single(),
-        supabase.from("admins").select("*").order("created_at"),
-      ])
+        const [settingsRes, adminsRes] = await Promise.all([
+          supabase.from("hotel_settings").select("*").single(),
+          supabase.from("admins").select("*").order("created_at"),
+        ])
 
-      setSettings(settingsRes.data)
-      setAdmins(adminsRes.data || [])
-      setIsLoading(false)
+        setSettings(settingsRes.data)
+        setAdmins(adminsRes.data || [])
+      } catch {
+        // Error fetching data
+      } finally {
+        setIsLoading(false)
+      }
     }
 
     fetchData()
@@ -82,22 +88,27 @@ export function SettingsModule() {
     if (!settings) return
     setIsSaving(true)
 
-    const supabase = createClient()
-    await supabase
-      .from("hotel_settings")
-      .update({
-        hotel_name: settings.hotel_name,
-        address: settings.address,
-        phone: settings.phone,
-        email: settings.email,
-        currency: settings.currency,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", settings.id)
+    try {
+      const supabase = createClient()
+      await supabase
+        .from("hotel_settings")
+        .update({
+          hotel_name: settings.hotel_name,
+          address: settings.address,
+          phone: settings.phone,
+          email: settings.email,
+          currency: settings.currency,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", settings.id)
 
-    setIsSaving(false)
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 3000)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch {
+      // Error saving
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const saveProfile = () => {
@@ -109,43 +120,53 @@ export function SettingsModule() {
   const addAdmin = async () => {
     if (!newAdminPhone || !newAdminName) return
 
-    const supabase = createClient()
-    const { data } = await supabase
-      .from("admins")
-      .insert({
-        name: newAdminName,
-        phone_number: newAdminPhone,
-        is_active: true,
-      })
-      .select()
-      .single()
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("admins")
+        .insert({
+          name: newAdminName,
+          phone_number: newAdminPhone,
+          is_active: true,
+        })
+        .select()
+        .single()
 
-    if (data) {
-      setAdmins([...admins, data])
-      setNewAdminPhone("")
-      setNewAdminName("")
+      if (data) {
+        setAdmins([...admins, data])
+        setNewAdminPhone("")
+        setNewAdminName("")
+      }
+    } catch {
+      // Error adding admin
     }
   }
 
   const toggleAdmin = async (id: string, isActive: boolean) => {
-    const supabase = createClient()
-    await supabase.from("admins").update({ is_active: !isActive }).eq("id", id)
-    setAdmins((prev) => prev.map((a) => (a.id === id ? { ...a, is_active: !isActive } : a)))
+    try {
+      const supabase = createClient()
+      await supabase.from("admins").update({ is_active: !isActive }).eq("id", id)
+      setAdmins((prev) => prev.map((a) => (a.id === id ? { ...a, is_active: !isActive } : a)))
+    } catch {
+      // Error toggling
+    }
   }
 
   const deleteAdmin = async (id: string) => {
-    const supabase = createClient()
-    await supabase.from("admins").delete().eq("id", id)
-    setAdmins((prev) => prev.filter((a) => a.id !== id))
+    try {
+      const supabase = createClient()
+      await supabase.from("admins").delete().eq("id", id)
+      setAdmins((prev) => prev.filter((a) => a.id !== id))
+    } catch {
+      // Error deleting
+    }
   }
 
   const cardClass = resolvedTheme === "light" ? "bg-white border-slate-200 shadow-sm" : "glass-card border-[#D4AF37]/10"
-
   const inputClass =
     resolvedTheme === "light"
       ? "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"
       : "bg-white/5 border-white/10 text-white placeholder:text-white/30"
-
   const textClass = resolvedTheme === "light" ? "text-slate-900" : "text-white"
   const textMutedClass = resolvedTheme === "light" ? "text-slate-500" : "text-white/60"
 
@@ -179,19 +200,19 @@ export function SettingsModule() {
         <TabsList className={`${resolvedTheme === "light" ? "bg-slate-100" : "bg-white/5"}`}>
           <TabsTrigger value="hotel" className="gap-2">
             <Building2 className="h-4 w-4" />
-            {t("hotelInfo")}
+            <span className="hidden sm:inline">{t("hotelInfo")}</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="gap-2">
             <Palette className="h-4 w-4" />
-            {t("appearance")}
+            <span className="hidden sm:inline">{t("appearance")}</span>
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
-            {t("adminProfile")}
+            <span className="hidden sm:inline">{t("adminProfile")}</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
-            {t("authorizedNumbers")}
+            <span className="hidden sm:inline">{t("authorizedNumbers")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -330,7 +351,7 @@ export function SettingsModule() {
                         className={`h-6 w-6 ${theme === option.value ? "text-[#D4AF37]" : textMutedClass}`}
                       />
                       <span
-                        className={`text-sm ${theme === option.value ? "text-[#D4AF37] font-medium" : textMutedClass}`}
+                        className={`text-xs ${theme === option.value ? "text-[#D4AF37] font-medium" : textMutedClass}`}
                       >
                         {option.label}
                       </span>
@@ -503,17 +524,13 @@ export function SettingsModule() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                          admin.is_active
-                            ? "bg-emerald-500/20"
-                            : resolvedTheme === "light"
-                              ? "bg-slate-200"
-                              : "bg-white/10"
+                          admin.is_active ? "bg-emerald-500/20" : "bg-red-500/20"
                         }`}
                       >
-                        <Users className={`h-4 w-4 ${admin.is_active ? "text-emerald-400" : textMutedClass}`} />
+                        <Users className={`h-4 w-4 ${admin.is_active ? "text-emerald-400" : "text-red-400"}`} />
                       </div>
                       <div>
-                        <p className={`font-medium ${textClass}`}>{admin.name}</p>
+                        <p className={`font-medium text-sm ${textClass}`}>{admin.name}</p>
                         <p className={`text-xs ${textMutedClass}`}>{admin.phone_number}</p>
                       </div>
                     </div>
@@ -526,7 +543,7 @@ export function SettingsModule() {
                         variant="ghost"
                         size="icon"
                         onClick={() => deleteAdmin(admin.id)}
-                        className={`${textMutedClass} hover:text-red-400`}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -539,26 +556,28 @@ export function SettingsModule() {
         </TabsContent>
       </Tabs>
 
-      {/* Developer Credits */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className={`text-center py-6 border-t ${resolvedTheme === "light" ? "border-slate-200" : "border-[#D4AF37]/10"}`}
-      >
-        <p className={`text-sm ${textMutedClass}`}>
-          {t("developedBy")}{" "}
-          <a
-            href="https://josh-right-congo.netlify.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#D4AF37] hover:text-[#F4D03F] font-medium inline-flex items-center gap-1 transition-colors"
-          >
-            Josh R
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </p>
-      </motion.div>
+      <Card className={cardClass}>
+        <CardContent className="py-6">
+          <div className="flex flex-col items-center justify-center gap-2 text-center">
+            <div className="flex items-center gap-2">
+              <Code className="h-4 w-4 text-[#D4AF37]" />
+              <span className={textMutedClass}>{t("developedBy")}</span>
+            </div>
+            <motion.a
+              href="https://josh-right-congo.netlify.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-[#D4AF37] font-semibold hover:text-[#F4D03F] transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Josh R
+              <ExternalLink className="h-4 w-4" />
+            </motion.a>
+            <p className={`text-xs ${textMutedClass} mt-2`}>Hôtel Touriste v1.0 — Place Mulamba, Bukavu</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

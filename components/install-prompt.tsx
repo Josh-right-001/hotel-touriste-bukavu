@@ -14,59 +14,81 @@ export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Check if iOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    setIsIOS(isIOSDevice)
+    setMounted(true)
 
-    // Check if already installed
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-    if (isStandalone) return
+    if (typeof window === "undefined" || typeof navigator === "undefined") return
 
-    // Listen for install prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setTimeout(() => setShowPrompt(true), 3000)
-    }
+    try {
+      // Check if iOS
+      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      setIsIOS(isIOSDevice)
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+      // Check if already installed
+      const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches
+      if (isStandalone) return
 
-    // Show iOS prompt after delay
-    if (isIOSDevice && !isStandalone) {
-      setTimeout(() => setShowPrompt(true), 5000)
-    }
+      // Check if dismissed
+      try {
+        if (sessionStorage.getItem("installPromptDismissed")) {
+          return
+        }
+      } catch {
+        // sessionStorage not available
+      }
 
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+      // Listen for install prompt
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault()
+        setDeferredPrompt(e as BeforeInstallPromptEvent)
+        setTimeout(() => setShowPrompt(true), 3000)
+      }
+
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+
+      // Show iOS prompt after delay
+      if (isIOSDevice && !isStandalone) {
+        setTimeout(() => setShowPrompt(true), 5000)
+      }
+
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+      }
+    } catch {
+      // Browser APIs not available
     }
   }, [])
 
   const handleInstall = async () => {
     if (!deferredPrompt) return
 
-    await deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
+    try {
+      await deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
 
-    if (outcome === "accepted") {
-      setDeferredPrompt(null)
-      setShowPrompt(false)
+      if (outcome === "accepted") {
+        setDeferredPrompt(null)
+        setShowPrompt(false)
+      }
+    } catch {
+      // Install prompt failed
     }
   }
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    // Don't show again for this session
-    sessionStorage.setItem("installPromptDismissed", "true")
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("installPromptDismissed", "true")
+      }
+    } catch {
+      // sessionStorage not available
+    }
   }
 
-  // Check if dismissed
-  useEffect(() => {
-    if (sessionStorage.getItem("installPromptDismissed")) {
-      setShowPrompt(false)
-    }
-  }, [])
+  if (!mounted) return null
 
   return (
     <AnimatePresence>

@@ -46,6 +46,7 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
   const [showClientModal, setShowClientModal] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { t } = useLanguage()
   const { resolvedTheme } = useTheme()
 
@@ -60,29 +61,45 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
     { id: "settings" as const, label: t("settings"), icon: Settings },
   ]
 
-  // Check for mobile
   useEffect(() => {
+    setMounted(true)
+
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+      if (typeof window !== "undefined") {
+        setIsMobile(window.innerWidth < 768)
+      }
     }
+
     checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", checkMobile)
+      return () => window.removeEventListener("resize", checkMobile)
+    }
   }, [])
 
   // Fetch unread notifications count
   useEffect(() => {
-    const fetchNotifications = async () => {
-      const supabase = createClient()
-      const { count } = await supabase.from("notifications").select("*", { count: "exact", head: true }).eq("lu", false)
+    if (!mounted) return
 
-      setUnreadNotifications(count || 0)
+    const fetchNotifications = async () => {
+      try {
+        const supabase = createClient()
+        const { count } = await supabase
+          .from("notifications")
+          .select("*", { count: "exact", head: true })
+          .eq("lu", false)
+
+        setUnreadNotifications(count || 0)
+      } catch {
+        // Error fetching notifications
+      }
     }
 
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [mounted])
 
   const handleClientAction = (clientId?: string) => {
     setSelectedClientId(clientId || null)
@@ -125,6 +142,14 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
   const textClass = resolvedTheme === "light" ? "text-slate-900" : "text-white"
   const textMutedClass = resolvedTheme === "light" ? "text-slate-500" : "text-white/50"
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#071428] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className={`min-h-screen flex ${bgClass}`}>
       {/* Mobile overlay */}
@@ -143,16 +168,15 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
       {/* Sidebar - Hidden on mobile, visible on desktop */}
       <motion.aside
         initial={false}
-        animate={{ x: isSidebarOpen ? 0 : "-100%" }}
-        className={`fixed md:relative md:translate-x-0 inset-y-0 left-0 z-50 w-72 ${sidebarBgClass} flex flex-col transition-transform md:transition-none`}
-        style={{ transform: isSidebarOpen || !isMobile ? "translateX(0)" : undefined }}
+        animate={{ x: isSidebarOpen || !isMobile ? 0 : "-100%" }}
+        className={`fixed md:relative inset-y-0 left-0 z-50 w-72 ${sidebarBgClass} flex flex-col`}
       >
         {/* Close button for mobile */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsSidebarOpen(false)}
-          className="absolute top-4 right-4 md:hidden text-white/60 hover:text-white"
+          className={`absolute top-4 right-4 md:hidden ${resolvedTheme === "light" ? "text-slate-600" : "text-white/60"} hover:text-[#D4AF37]`}
         >
           <X className="h-5 w-5" />
         </Button>
