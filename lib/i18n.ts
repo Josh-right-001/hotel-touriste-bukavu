@@ -41,8 +41,12 @@ export const translations = {
     recentActivity: "Activité Récente",
 
     // Reception
-    registerClient: "Enregistrer un nouveau client",
+    registerClient: "Enregistrer le client",
+    registerNewClient: "Enregistrer un nouveau client",
     registrationForm: "Formulaire d'enregistrement",
+    quickNewClient: "Nouveau Client Rapide",
+    quickForm: "Formulaire Rapide",
+    completeForm: "Formulaire Complet",
     fullName: "Nom complet",
     email: "Email",
     nationality: "Nationalité",
@@ -52,6 +56,14 @@ export const translations = {
     availableRoom: "Chambre disponible",
     registerSuccess: "Client enregistré avec succès!",
     selectRoom: "Sélectionner une chambre",
+    allTypes: "Tous les types",
+    night: "nuit",
+    room: "Chambre",
+    noRoomsAvailable: "Aucune chambre disponible",
+    clientRegisteredSuccess: "Client enregistré avec succès!",
+    newClientRegistered: "Nouveau client enregistré",
+    registeredInRoom: "a été enregistré dans la chambre",
+    errorOccurred: "Une erreur est survenue. Veuillez réessayer.",
 
     // Rooms
     roomManagement: "Gestion des Chambres",
@@ -192,8 +204,12 @@ export const translations = {
     recentActivity: "Recent Activity",
 
     // Reception
-    registerClient: "Register a new client",
+    registerClient: "Register Client",
+    registerNewClient: "Register a new client",
     registrationForm: "Registration Form",
+    quickNewClient: "Quick New Client",
+    quickForm: "Quick Form",
+    completeForm: "Complete Form",
     fullName: "Full Name",
     email: "Email",
     nationality: "Nationality",
@@ -203,6 +219,14 @@ export const translations = {
     availableRoom: "Available Room",
     registerSuccess: "Client registered successfully!",
     selectRoom: "Select a room",
+    allTypes: "All types",
+    night: "night",
+    room: "Room",
+    noRoomsAvailable: "No rooms available",
+    clientRegisteredSuccess: "Client registered successfully!",
+    newClientRegistered: "New client registered",
+    registeredInRoom: "has been registered in room",
+    errorOccurred: "An error occurred. Please try again.",
 
     // Rooms
     roomManagement: "Room Management",
